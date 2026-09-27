@@ -2,10 +2,11 @@ services:
   - type: web
     name: manak-ai-backend
     runtime: docker
-    repo: https://github.com/your-org/manak-ai
+    repo: https://github.com/sammed979/Manak_Ai
+    branch: main
     rootDir: backend
-    dockerfilePath: ./Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: Dockerfile
+    dockerContext: .
     region: oregon
     plan: starter
     numInstances: 1
