@@ -1,14 +1,14 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -x
 
-echo "==> Running database migrations..."
-python -m alembic upgrade head || true
+echo "==> [1/4] Running database migrations (Alembic)..."
+python -m alembic upgrade head || echo "==> WARNING: alembic migrations failed (ignored, will use init_db fallback)"
 
-echo "==> Initializing database tables (fallback if Alembic is empty)..."
-python init_db.py || true
+echo "==> [2/4] Ensuring database tables exist (init_db fallback)..."
+python init_db.py || echo "==> WARNING: init_db.py failed (ignored)"
 
-echo "==> Seeding demo data (if enabled / DB is fresh)..."
-python seed_all.py || true
+echo "==> [3/4] Running demo data seeders (idempotent, skips if already seeded)..."
+python seed_all.py || echo "==> WARNING: seed_all.py failed (ignored — server will still boot)"
 
-echo "==> Starting Uvicorn server on 0.0.0.0:8000..."
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+echo "==> [4/4] Starting Uvicorn server on PORT=${PORT:-8000}..."
+exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" --workers 1
