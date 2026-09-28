@@ -1,4 +1,9 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const rawBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = rawBase.endsWith('/api/v1')
+  ? rawBase
+  : rawBase.endsWith('/')
+    ? `${rawBase}api/v1`
+    : `${rawBase}/api/v1`;
 
 export interface ApiResponse<T> {
   data?: T;
@@ -217,15 +222,43 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch (_parseErr) {
+        data = {};
+      }
 
       if (!response.ok) {
-        return { error: data.detail || `Request failed (${response.status})` };
+        let msg: string;
+        if (response.status === 401) {
+          msg = data.detail || 'Authentication failed — please sign in again.';
+          if (msg === 'Could not validate credentials') {
+            this.clearToken();
+          }
+        } else if (response.status === 403) {
+          msg = data.detail || 'You do not have permission to perform this action.';
+        } else if (response.status === 404) {
+          msg = data.detail || `Resource not found (${endpoint})`;
+        } else if (response.status >= 500) {
+          msg = data.detail || `Server error (${response.status}) — please try again later.`;
+        } else {
+          msg = data.detail || `Request failed (${response.status})`;
+        }
+        return { error: msg };
       }
 
       return { data };
-    } catch (error) {
-      return { error: 'Network error — is the backend running?' };
+    } catch (error: any) {
+      const name = error?.name ?? '';
+      const message = error?.message ?? '';
+      let msg = 'Network error — is the backend running?';
+      if (name === 'AbortError') {
+        msg = 'Request timed out — please try again.';
+      } else if (/Failed to fetch|NetworkError|ENOTFOUND|ECONNREFUSED/i.test(message)) {
+        msg = `Cannot reach the backend at ${this.baseUrl.replace(/\/api\/v1\/?$/, '')} — please verify the server is online and VITE_API_BASE_URL is correct.`;
+      }
+      return { error: msg };
     }
   }
 
@@ -331,13 +364,33 @@ class ApiClient {
         headers,
         body: formData,
       });
-      const data = await response.json();
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch (_parseErr) {
+        data = {};
+      }
       if (!response.ok) {
-        return { error: data.detail || `Analysis failed (${response.status})` };
+        let msg: string;
+        if (response.status === 401) {
+          msg = data.detail || 'Authentication failed — please sign in again.';
+        } else if (response.status === 413) {
+          msg = 'File is too large — please upload a smaller document.';
+        } else if (response.status >= 500) {
+          msg = data.detail || `Server error (${response.status}) — please try again later.`;
+        } else {
+          msg = data.detail || `Analysis failed (${response.status})`;
+        }
+        return { error: msg };
       }
       return { data };
-    } catch (error) {
-      return { error: 'Network error — is the backend running?' };
+    } catch (error: any) {
+      const message = error?.message ?? '';
+      let msg = 'Network error — is the backend running?';
+      if (/Failed to fetch|NetworkError|ENOTFOUND|ECONNREFUSED/i.test(message)) {
+        msg = `Cannot reach the backend at ${this.baseUrl.replace(/\/api\/v1\/?$/, '')} — please verify the server is online and VITE_API_BASE_URL is correct.`;
+      }
+      return { error: msg };
     }
   }
 }

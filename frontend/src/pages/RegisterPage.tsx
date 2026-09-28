@@ -50,8 +50,10 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+            <label htmlFor="register-fullname" className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
             <input
+              id="register-fullname"
+              name="full_name"
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
@@ -61,8 +63,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <label htmlFor="register-email" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
             <input
+              id="register-email"
+              name="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -72,8 +76,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <label htmlFor="register-password" className="block text-sm font-medium text-gray-700 mb-2">Password</label>
             <input
+              id="register-password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -83,8 +89,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+            <label htmlFor="register-role" className="block text-sm font-medium text-gray-700 mb-2">Role</label>
             <select
+              id="register-role"
+              name="role"
               value={role}
               onChange={(e) => setRole(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"

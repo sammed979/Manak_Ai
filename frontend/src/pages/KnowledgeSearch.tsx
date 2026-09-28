@@ -64,6 +64,8 @@ export default function KnowledgeSearch() {
         <form onSubmit={handleSearch} className="mb-6">
           <div className="flex gap-3">
             <input
+              id="knowledge-search"
+              name="knowledge-search"
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
