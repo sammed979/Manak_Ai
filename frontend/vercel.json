@@ -4,6 +4,20 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "routes": [
+    {
+      "src": "^/assets/.*$",
+      "dest": "/$0"
+    },
+    {
+      "src": "^/(favicon|vite)\\.(svg|ico|png)$",
+      "dest": "/$0"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
