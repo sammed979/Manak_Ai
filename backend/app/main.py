@@ -3,7 +3,6 @@ import os
 import re
 import sys
 from fastapi import FastAPI, Request, status
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
@@ -96,14 +95,12 @@ app = FastAPI(
     redoc_url="/api/redoc",
 )
 
+# Single CORS processor handles literal origins AND wildcard glob patterns
+# (e.g. https://*.vercel.app) with allow_credentials=true.  Running ONE
+# middleware avoids the standard CORSMiddleware overwriting our preflight
+# 204 responses with 400 "Disallowed CORS origin" when the configured list
+# contains wildcards (which the standard middleware rejects with credentials).
 app.add_middleware(PatternCORSMiddleware, origins=list(settings.CORS_ORIGINS))
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[o for o in settings.CORS_ORIGINS if "*" not in o],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 app.include_router(api_router)
 
