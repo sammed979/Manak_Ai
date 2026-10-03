@@ -1,9 +1,9 @@
 {
-  "framework": "vite",
   "installCommand": "npm install",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "trailingSlash": false,
   "routes": [
     {
       "src": "^/assets/.*$",
@@ -12,6 +12,9 @@
     {
       "src": "^/(favicon|vite)\\.(svg|ico|png)$",
       "dest": "/$0"
+    },
+    {
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",

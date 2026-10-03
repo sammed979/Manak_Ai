@@ -1,15 +1,30 @@
 {
-  "framework": "vite",
   "installCommand": "cd frontend && npm install",
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
   "cleanUrls": true,
+  "trailingSlash": false,
   "routes": [
-    { "src": "^/assets/.*$", "dest": "/$0" },
-    { "src": "^/(favicon|vite)\\.(svg|ico|png)$", "dest": "/$0" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    {
+      "src": "^/assets/.*$",
+      "dest": "/$0"
+    },
+    {
+      "src": "^/(favicon|vite)\\.(svg|ico|png)$",
+      "dest": "/$0"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
