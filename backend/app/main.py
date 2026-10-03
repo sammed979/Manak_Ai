@@ -1,9 +1,12 @@
 import logging
 import os
+import re
 import sys
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.types import ASGIApp
 from app.config.settings import settings
 from app.api.v1.api import api_router
 
@@ -16,6 +19,75 @@ logging.basicConfig(
 logger = logging.getLogger("manak_ai")
 
 
+class PatternCORSMiddleware(BaseHTTPMiddleware):
+    """CORS middleware that supports glob-style wildcard origins (e.g.
+    ``https://*.vercel.app``) combined with allow_credentials.
+
+    The built-in starlette/fastapi CORSMiddleware will not echo back the
+    request ``Origin`` header when the configured ``allow_origins`` list
+    contains wildcards, because it only allows a literal ``"*"`` and that
+    cannot be combined with ``Access-Control-Allow-Credentials: true``.
+
+    This middleware replaces that behaviour: if an incoming Origin matches
+    any pattern (either literally or via ``*`` glob) we echo the exact
+    Origin back as the ``Access-Control-Allow-Origin`` header and mark
+    ``Vary: Origin`` so downstream caches do the right thing.  Unknown
+    origins are passed through unchanged so the standard CORSMiddleware or
+    the router can still decide.
+    """
+
+    def __init__(self, app: ASGIApp, origins: list[str]):
+        super().__init__(app)
+        self._literal: set[str] = set()
+        self._patterns: list[re.Pattern[str]] = []
+        for raw in origins or []:
+            origin = raw.strip().rstrip("/")
+            if not origin:
+                continue
+            if "*" in origin:
+                regex = re.escape(origin).replace(r"\*", r"[^./]+") + r"\Z"
+                self._patterns.append(re.compile(regex, re.IGNORECASE))
+            else:
+                self._literal.add(origin.lower())
+
+    def _matches(self, origin: str) -> bool:
+        key = origin.rstrip("/").lower()
+        if key in self._literal:
+            return True
+        for pattern in self._patterns:
+            if pattern.match(key):
+                return True
+        return False
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
+        origin = request.headers.get("origin")
+        if origin and self._matches(origin):
+            if request.method == "OPTIONS":
+                acrm = request.headers.get("access-control-request-method")
+                headers = {
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Credentials": "true",
+                    "Vary": "Origin",
+                    "Access-Control-Allow-Methods": acrm or "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+                    "Access-Control-Allow-Headers": request.headers.get(
+                        "access-control-request-headers",
+                        "Content-Type,Authorization,Accept,Accept-Language",
+                    ),
+                    "Access-Control-Max-Age": "86400",
+                }
+                return Response(status_code=204, headers=headers)
+            response = await call_next(request)
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            vary = response.headers.get("Vary")
+            if vary:
+                response.headers["Vary"] = vary + ", Origin"
+            else:
+                response.headers["Vary"] = "Origin"
+            return response
+        return await call_next(request)
+
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
@@ -24,9 +96,10 @@ app = FastAPI(
     redoc_url="/api/redoc",
 )
 
+app.add_middleware(PatternCORSMiddleware, origins=list(settings.CORS_ORIGINS))
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=list(settings.CORS_ORIGINS),
+    allow_origins=[o for o in settings.CORS_ORIGINS if "*" not in o],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

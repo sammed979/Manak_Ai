@@ -56,16 +56,43 @@ class Settings(BaseSettings):
     SPEECH_PROVIDER: str = "mock"
 
     # CORS
-    CORS_ORIGINS: object = ["http://localhost:5173", "http://localhost:3000"]
+    # Supports wildcards (e.g. "https://*.vercel.app") and comma-separated strings.
+    # Always includes localhost dev URLs plus *.vercel.app preview wildcard so
+    # every new Vercel preview build works without re-configuring this list.
+    CORS_ORIGINS: object = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://*.vercel.app",
+    ]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def split_cors_origins(cls, v):
+        base = {
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "https://*.vercel.app",
+        }
         if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
-        if isinstance(v, list):
-            return v
-        return ["http://localhost:5173", "http://localhost:3000"]
+            for part in v.split(","):
+                p = part.strip()
+                if p:
+                    base.add(p)
+        elif isinstance(v, (list, tuple, set)):
+            for p in v:
+                if isinstance(p, str) and p.strip():
+                    base.add(p.strip())
+        ordered = []
+        for pattern in (
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "https://*.vercel.app",
+        ):
+            if pattern in base:
+                ordered.append(pattern)
+                base.discard(pattern)
+        ordered.extend(sorted(base))
+        return ordered
 
     @field_validator("DEBUG", mode="after")
     @classmethod
