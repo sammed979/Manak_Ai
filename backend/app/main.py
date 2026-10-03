@@ -3,7 +3,7 @@ import os
 import sys
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from app.config.settings import settings
 from app.api.v1.api import api_router
 
@@ -19,7 +19,7 @@ logger = logging.getLogger("manak_ai")
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    debug=False,  # Never expose FastAPI debug tracebacks; use our logging
+    debug=False,
     docs_url="/api/docs",
     redoc_url="/api/redoc",
 )
@@ -39,7 +39,7 @@ app.include_router(api_router)
 async def catch_exceptions(request: Request, call_next):
     try:
         return await call_next(request)
-    except Exception as exc:  # noqa: BLE001 - top-level safety net
+    except Exception as exc:  # noqa: BLE001
         logger.exception("Unhandled error on %s %s", request.method, request.url.path)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -51,19 +51,36 @@ async def catch_exceptions(request: Request, call_next):
         )
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
+@app.head("/", include_in_schema=False)
 async def root():
-    return {
+    payload = {
         "message": "MANAK AI - BIS Compliance Assistant",
         "version": settings.APP_VERSION,
         "status": "running",
         "demo_mode": settings.DEMO_MODE,
     }
+    return JSONResponse(content=payload, status_code=200)
 
 
-@app.get("/health")
+@app.get("/health", include_in_schema=False)
+@app.head("/health", include_in_schema=False)
 async def health():
-    return {"status": "healthy"}
+    return JSONResponse(content={"status": "healthy"}, status_code=200)
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(
+        content=(
+            b"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>"
+            b"<rect width='100' height='100' rx='20' fill='%230052cc'/>"
+            b"<text x='50' y='70' text-anchor='middle' font-family='Arial,sans-serif' "
+            b"font-size='52' font-weight='bold' fill='white'>M</text></svg>"
+        ),
+        media_type="image/svg+xml",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 if __name__ == "__main__":
